@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey" : "KeyName",
+    "ParameterValue" : "dmsserverkey"
+  },
+  {
+    "ParameterKey" : "VPCAvailabilityZone1",
+    "ParameterValue" : "us-east-1a"
+  },
+  {
+    "ParameterKey" : "VPCAvailabilityZone2",
+    "ParameterValue" : "us-east-1c"
+  }
+]
