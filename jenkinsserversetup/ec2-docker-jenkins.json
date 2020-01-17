@@ -1,0 +1,110 @@
+{
+"AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "EC2 instance with Docker and Jenkins installed",
+    "Metadata": {
+
+    },
+    "Parameters": {
+        "KeyName" : {
+            "Description" : "Ec2 Access Key",
+            "Type" : "String",
+            "Default" : "ec2-dev-key-offc"
+        }
+    },
+    "Mappings": {
+
+    },
+    "Conditions": {
+
+    },
+    "Resources": {
+        "sshSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupDescription" : "Enable SSH access on Port 22",
+                "SecurityGroupIngress" : [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : 22,
+                        "ToPort" : 22,
+                        "CidrIp" : "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+        "webSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+              "GroupDescription" : "Enable HTTP access via user defined port",
+              "SecurityGroupIngress" : [ { "IpProtocol" : "tcp", "FromPort" : 80, "ToPort" : 80, "CidrIp" : "0.0.0.0/0" },
+										 { "IpProtocol" : "tcp", "FromPort" : 8080, "ToPort" : 8080, "CidrIp" : "0.0.0.0/0" }]
+            }
+          },
+        "jenkinsDockerServer" : {
+            "Type" : "AWS::EC2::Instance",
+            "Properties" : {
+                "ImageId" : "ami-0080e4c5bc078760e",
+                "InstanceType" : "t2.micro",
+                "KeyName" : {"Ref" : "KeyName"},
+                "SecurityGroups" : [
+                       {"Ref" : "sshSecurityGroup"} ,
+                       {"Ref" : "webSecurityGroup"}       
+                ],
+                "Tags" : [
+                    {"Key" : "owner", "Value" :  "Dev team"},
+                    {"Key" : "environment", "Value" :  "dev"}
+                ],
+
+                "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+                    "#!/bin/bash \n",
+                    
+                    "# steps taken verbatim from: \n",
+                    "#  http://docs.aws.amazon.com/AmazonECS/latest/developerguide/docker-basics.html#install_docker \n",
+                    
+                    "sudo yum update -y \n",
+                    "sudo yum install -y docker \n",
+                    "sudo service docker start \n",
+                    "sudo usermod -a -G docker ec2-user \n",
+                    "# log out and log in to pickup the added group \n",
+                    
+                    "# Also install some common sense stuff \n",
+                    "sudo yum install -y git \n",
+                    "sudo yum -y groupinstall \"Development Tools\"  \n",
+
+                    "docker run ",
+                    "-u root  ",
+                    "--rm  ",
+                    "-d  ",
+                    "-p 8080:8080  ",
+                    "-p 50000:50000  ",
+                    "-v jenkins-data:/var/jenkins_home  ",
+                    "-v /var/run/docker.sock:/var/run/docker.sock  ",
+                    "jenkinsci/blueocean"
+                  ]]}}  
+
+
+            }
+           
+        }
+        
+    },
+    "Outputs": {
+        "WebsiteURL": {
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  "http://",
+                  {
+                    "Fn::GetAtt": [
+                      "jenkinsDockerServer",
+                      "PublicIp"
+                    ]
+                  }
+                ]
+              ]
+            }
+          }
+    }
+}
+
